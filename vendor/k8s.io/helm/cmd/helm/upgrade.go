@@ -91,7 +91,7 @@ func newUpgradeCmd(client helm.Interface, out io.Writer) *cobra.Command {
 		Use:     "upgrade [RELEASE] [CHART]",
 		Short:   "upgrade a release",
 		Long:    upgradeDesc,
-		PreRunE: setupConnection,
+		PreRunE: func(_ *cobra.Command, _ []string) error { return setupConnection() },
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := checkArgsLength(len(args), "release name", "chart path"); err != nil {
 				return err
@@ -154,9 +154,15 @@ func (u *upgradeCmd) run() error {
 		releaseHistory, err := u.client.ReleaseHistory(u.release, helm.WithMaxHistory(1))
 
 		if err == nil {
+			if u.namespace == "" {
+				u.namespace = defaultNamespace()
+			}
 			previousReleaseNamespace := releaseHistory.Releases[0].Namespace
 			if previousReleaseNamespace != u.namespace {
-				fmt.Fprintf(u.out, "WARNING: Namespace doesn't match with previous. Release will be deployed to %s\n", previousReleaseNamespace)
+				fmt.Fprintf(u.out,
+					"WARNING: Namespace %q doesn't match with previous. Release will be deployed to %s\n",
+					u.namespace, previousReleaseNamespace,
+				)
 			}
 		}
 

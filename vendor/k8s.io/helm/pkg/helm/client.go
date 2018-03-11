@@ -17,6 +17,7 @@ limitations under the License.
 package helm // import "k8s.io/helm/pkg/helm"
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -25,10 +26,15 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 )
+
+// maxMsgSize use 20MB as the default message size limit.
+// grpc library default is 4MB
+const maxMsgSize = 1024 * 1024 * 20
 
 // Client manages client side of the Helm-Tiller protocol.
 type Client struct {
@@ -303,13 +309,13 @@ func (h *Client) PingTiller() error {
 // are constructed here.
 func (h *Client) connect(ctx context.Context) (conn *grpc.ClientConn, err error) {
 	opts := []grpc.DialOption{
-		grpc.WithTimeout(5 * time.Second),
 		grpc.WithBlock(),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			// Send keepalive every 30 seconds to prevent the connection from
 			// getting closed by upstreams
 			Time: time.Duration(30) * time.Second,
 		}),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)),
 	}
 	switch {
 	case h.opts.useTLS:
@@ -317,7 +323,9 @@ func (h *Client) connect(ctx context.Context) (conn *grpc.ClientConn, err error)
 	default:
 		opts = append(opts, grpc.WithInsecure())
 	}
-	if conn, err = grpc.Dial(h.opts.host, opts...); err != nil {
+	ctx, cancel := context.WithTimeout(ctx, h.opts.connectTimeout)
+	defer cancel()
+	if conn, err = grpc.DialContext(ctx, h.opts.host, opts...); err != nil {
 		return nil, err
 	}
 	return conn, nil
@@ -482,6 +490,17 @@ func (h *Client) ping(ctx context.Context) error {
 	}
 	defer c.Close()
 
-	rlc := rls.NewReleaseServiceClient(c)
-	return rlc.PingTiller(ctx)
+	healthClient := healthpb.NewHealthClient(c)
+	resp, err := healthClient.Check(ctx, &healthpb.HealthCheckRequest{Service: "Tiller"})
+	if err != nil {
+		return err
+	}
+	switch resp.GetStatus() {
+	case healthpb.HealthCheckResponse_SERVING:
+		return nil
+	case healthpb.HealthCheckResponse_NOT_SERVING:
+		return fmt.Errorf("tiller is not serving requests at this time, Please try again later")
+	default:
+		return fmt.Errorf("tiller healthcheck returned an unknown status")
+	}
 }

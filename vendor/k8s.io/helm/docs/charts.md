@@ -45,6 +45,7 @@ The `Chart.yaml` file is required for a chart. It contains the following fields:
 ```yaml
 name: The name of the chart (required)
 version: A SemVer 2 version (required)
+kubeVersion: A SemVer range of compatible Kubernetes versions (optional)
 description: A single-sentence description of this project (optional)
 keywords:
   - A list of keywords about this project (optional)
@@ -849,7 +850,7 @@ considerations in mind:
 - The `Chart.yaml` will be overwritten by the generator.
 - Users will expect to modify such a chart's contents, so documentation
   should indicate how users can do so.
-- All occurances of `<CHARTNAME>` will be replaced with the specified chart
+- All occurences of `<CHARTNAME>` will be replaced with the specified chart
   name so that starter charts can be used as templates.
 
 Currently the only way to add a chart to `$HELM_HOME/starters` is to manually
