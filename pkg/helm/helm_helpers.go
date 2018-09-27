@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/jenkins-x/jx/pkg/log"
@@ -262,4 +263,20 @@ func AppendMyValues(valueFiles []string) ([]string, error) {
 		}
 	}
 	return valueFiles, nil
+}
+
+// AddValuesIfMissing for the list of defaultValues arguments of the form 'foo.bar=whatever' find if 'foo.bar' is already
+// specified in the 'values' array and if not add it in
+func AddValuesIfMissing(values []string, defaultValues ...string) []string {
+	answer := values
+	for _, defaultValue := range defaultValues {
+		idx := strings.Index(defaultValue, "=")
+		if idx > 0 {
+			prefix := defaultValue[0 : idx+1]
+			if util.StringArrayIndex(answer, prefix) < 0 {
+				answer = append(answer, defaultValue)
+			}
+		}
+	}
+	return answer
 }

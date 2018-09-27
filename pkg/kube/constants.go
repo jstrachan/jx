@@ -25,6 +25,9 @@ const (
 	// ChartKubeless the default chart for kubeless
 	ChartKubeless = "incubator/kubeless"
 
+	// ChartSentry the default chart for sentry
+	ChartSentry = "stable/sentry"
+
 	// ServiceJenkins is the name of the Jenkins Service
 	ServiceJenkins = "jenkins"
 
@@ -217,6 +220,7 @@ var (
 		"kubeless":   ChartKubeless,
 		"prometheus": "stable/prometheus",
 		"grafana":    "stable/grafana",
+		"sentry":     ChartSentry,
 	}
 
 	AddonServices = map[string]string{
