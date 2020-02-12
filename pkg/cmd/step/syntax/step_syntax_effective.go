@@ -524,12 +524,41 @@ func (o *StepSyntaxEffectiveOptions) LoadProjectConfig(workingDir string) (*conf
 		if err != nil {
 			return nil, fileName, errors.Wrapf(err, "failed to check if file exists %s", fileName)
 		}
+		if !exists {
+			packsDir, err := o.findDefaultBuildPack()
+			if err != nil {
+				return nil, fileName, err
+			}
+
+			// lets see if this is a reusable pipeline in the build pack
+			fileName = filepath.Join(packsDir, "contexts", o.Context, config.ProjectConfigFileName)
+			exists, err = util.FileExists(fileName)
+			if err != nil {
+				return nil, fileName, errors.Wrapf(err, "failed to check if file exists %s", fileName)
+			}
+		}
 		if exists {
 			config, err := config.LoadProjectConfigFile(fileName)
 			return config, fileName, err
 		}
 	}
 	return config.LoadProjectConfig(workingDir)
+}
+
+// findDefaultBuildPack get the default team build pack on disk when we have no ProjectConfig for a context
+// which we are going to inherit from the build pack
+func (o *StepSyntaxEffectiveOptions) findDefaultBuildPack() (string, error) {
+	projectConfig := &config.ProjectConfig{}
+	i := &opts.InvokeDraftPack{
+		CustomDraftPack: "contexts",
+		DisableAddFiles: true,
+		ProjectConfig:   projectConfig,
+	}
+	dir, _, err := o.InitBuildPacks(i)
+	if err != nil {
+		return dir, errors.Wrapf(err, "failed to load default build pack git directory")
+	}
+	return dir, err
 }
 
 func (o *StepSyntaxEffectiveOptions) makeConcisePipeline(projectConfig *config.ProjectConfig) *config.ProjectConfig {
