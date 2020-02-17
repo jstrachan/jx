@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/jenkins-x/jx/pkg/cloud/amazon/session"
@@ -126,6 +127,11 @@ func (o *StepVerifyPreInstallOptions) Run() error {
 		return err
 	}
 
+	err = o.promptForExperimentalFeatures(requirements)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	err = o.verifyTLS(requirements)
 	if err != nil {
 		return errors.WithStack(err)
@@ -190,7 +196,7 @@ func (o *StepVerifyPreInstallOptions) Run() error {
 		return err
 	}
 	log.Logger().Info("\n")
-	if !o.DisableVerifyHelm && !requirements.Helmfile {
+	if !o.DisableVerifyHelm && !requirements.ExperimentalFeatures.Helmfile.Enabled {
 		err = o.verifyHelm(ns)
 		if err != nil {
 			return err
@@ -789,6 +795,36 @@ func (o *StepVerifyPreInstallOptions) verifyStorage(requirements *config.Require
 	return nil
 }
 
+// promptForExperimentalFeatures notify the user that experimental features are enabled and prompt to continue
+func (o *StepVerifyPreInstallOptions) promptForExperimentalFeatures(requirements *config.RequirementsConfig) error {
+	features := reflect.ValueOf(requirements.ExperimentalFeatures)
+	confirm := true
+	if os.Getenv(boot.OverrideExperimentalFeatureWarningEnvVarName) == "true" {
+		confirm = false
+	}
+	enabledExperimentalFeatures := make([]string, 0)
+	for i := 0; i < features.NumField(); i++ {
+		featureName := features.Type().Field(i).Name
+		enabledField := features.Field(i).FieldByName("Enabled")
+		if enabledField.Type().Kind() == reflect.Bool && enabledField.Bool() {
+			enabledExperimentalFeatures = append(enabledExperimentalFeatures, featureName)
+		}
+	}
+	if len(enabledExperimentalFeatures) > 0 {
+		log.Logger().Warnf("You have enabled the following experimental features: %s", strings.Join(enabledExperimentalFeatures, ", "))
+		if confirm && !o.BatchMode {
+			message := fmt.Sprintf("Do you wish to continue?")
+			help := fmt.Sprintf("Experimental features are subject to change and are not recommended for production environments, more details on experimental features can be found at https://jenkins-x.io/placeholder")
+			if answer, err := util.Confirm(message, false, help, o.GetIOFileHandles()); err != nil {
+				return err
+			} else if !answer {
+				return errors.Errorf("cannot continue because experimental features are enabled.")
+			}
+		}
+	}
+	return nil
+}
+
 func (o *StepVerifyPreInstallOptions) verifyTLS(requirements *config.RequirementsConfig) error {
 	if !requirements.Ingress.TLS.Enabled {
 		confirm := false
@@ -1007,7 +1043,7 @@ func (o *StepVerifyPreInstallOptions) SaveConfig(c *config.RequirementsConfig, f
 		return errors.Wrapf(err, "failed to save file %s", fileName)
 	}
 
-	if c.Helmfile {
+	if c.ExperimentalFeatures.Helmfile.Enabled {
 		y := config.RequirementsValues{
 			RequirementsConfig: c,
 		}

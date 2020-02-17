@@ -166,7 +166,7 @@ func (o *CommonOptions) HelmfileModifyDevEnvironment(callback func(env *v1.Envir
 
 // ConfigureCommonOptions lets us configure the common options based on the requirements
 func (o *CommonOptions) ConfigureCommonOptions(requirements *config.RequirementsConfig) error {
-	if requirements.Helmfile {
+	if requirements.ExperimentalFeatures.Helmfile.Enabled {
 		// if using helmfile lets disable eagerly creating the dev Environment and instead lets create that via helm
 		o.ModifyDevEnvironmentFn = o.HelmfileModifyDevEnvironment
 

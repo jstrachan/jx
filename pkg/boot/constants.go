@@ -6,6 +6,8 @@ const (
 	// OverrideTLSWarningEnvVarName is an environment variable set in BDD tests to override the error (in batch mode)
 	// that is created if TLS is not enabled
 	OverrideTLSWarningEnvVarName = "TESTING_ONLY_OVERRIDE_TLS_WARNING"
+	// OverrideExperimentalFeatureWarningEnvVarName is an environment variable used to disable the experimental feature warning during boot
+	OverrideExperimentalFeatureWarningEnvVarName = "OVERRIDE_EXPERIMENTAL_FEATURE_WARNING"
 	// ConfigBaseRefEnvVarName is the env var name used in the pipeline to reference the base used for the config
 	ConfigBaseRefEnvVarName = "CONFIG_BASE_REF"
 	// ConfigRepoURLEnvVarName is the env var name used in the pipeline to reference the URL of the config

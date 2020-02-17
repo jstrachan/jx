@@ -455,6 +455,20 @@ type GithubAppConfig struct {
 	URL string `json:"url,omitempty"`
 }
 
+// ExperimentalFeatures contains experimental features that can be enabled in Jenkins X
+type ExperimentalFeatures struct {
+	// Configuration to enable helmfile
+	Helmfile HelmfileConfig `json:"helmfile,omitempty"`
+}
+
+// ExperimentalFeatures contains experimental features that can be enabled in Jenkins X
+type HelmfileConfig struct {
+	// Indicates if we are using helmfile and helm 3 to spin up environments. This is currently an experimental
+	// feature flag used to implement better Multi-Cluster support. See https://github.com/jenkins-x/jx/issues/6442
+	Enabled bool `json:"enabled,omitempty"`
+}
+
+
 // RequirementsValues contains the logical installation requirements in the `jx-requirements.yml` file as helm values
 type RequirementsValues struct {
 	// RequirementsConfig contains the logical installation requirements
@@ -477,9 +491,6 @@ type RequirementsConfig struct {
 	// GitOps if enabled we will setup a webhook in the boot configuration git repository so that we can
 	// re-run 'jx boot' when changes merge to the master branch
 	GitOps bool `json:"gitops,omitempty"`
-	// Indicates if we are using helmfile and helm 3 to spin up environments. This is currently an experimental
-	// feature flag used to implement better Multi-Cluster support. See https://github.com/jenkins-x/jx/issues/6442
-	Helmfile bool `json:"helmfile,omitempty"`
 	// Kaniko whether to enable kaniko for building docker images
 	Kaniko bool `json:"kaniko,omitempty"`
 	// Ingress contains ingress specific requirements
@@ -500,6 +511,8 @@ type RequirementsConfig struct {
 	VersionStream VersionStreamConfig `json:"versionStream"`
 	// Webhook specifies what engine we should use for webhooks
 	Webhook WebhookType `json:"webhook,omitempty"`
+	// ExperimentalFeatures contains experimental features that can be enabled in Jenkins X
+	ExperimentalFeatures ExperimentalFeatures `json:"experimentalFeatures,omitempty"`
 }
 
 // NewRequirementsConfig creates a default configuration file
@@ -651,7 +664,7 @@ func (c *RequirementsConfig) SaveConfig(fileName string) error {
 		return errors.Wrapf(err, "failed to save file %s", fileName)
 	}
 
-	if c.Helmfile {
+	if c.ExperimentalFeatures.Helmfile.Enabled {
 		y := RequirementsValues{
 			RequirementsConfig: c,
 		}
@@ -953,7 +966,7 @@ func (c *RequirementsConfig) OverrideRequirementsFromEnvironment(gcloudFn func()
 	}
 	if "" != os.Getenv(RequirementHelmfile) {
 		if envVarBoolean(os.Getenv(RequirementHelmfile)) {
-			c.Helmfile = true
+			c.ExperimentalFeatures.Helmfile.Enabled = true
 		}
 	}
 	if "" != os.Getenv(RequirementKaniko) {
