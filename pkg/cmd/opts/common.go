@@ -555,7 +555,7 @@ func (o *CommonOptions) Helm() helm.Helmer {
 			// check helmfile featureflag but default to existing behaviour if there's any issues
 			var helmer helm.Helmer
 			r, _, _ := config.LoadRequirementsConfig("")
-			if r.Helmfile {
+			if r.ExperimentalFeatures.Helmfile.Enabled {
 				helmer = o.NewHelm(false, "helm", true, false)
 			} else {
 				helmer = o.NewHelm(false, "helm3", true, false)
